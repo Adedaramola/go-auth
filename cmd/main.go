@@ -7,11 +7,16 @@ import (
 	"os"
 	"time"
 
-	"github.com/adedaramola/golang-auth/database"
+	"github.com/adedaramola/golang-auth/internal/database"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
-const DatabaseDsn = "root@/goauth"
+func init() {
+	if err := godotenv.Load(); err != nil {
+		panic(".env file is missing")
+	}
+}
 
 func main() {
 	router := mux.NewRouter()
@@ -19,14 +24,14 @@ func main() {
 	router.HandleFunc("/", Ping).Methods("GET")
 	router.HandleFunc("/register", RegisterUser).Methods("POST")
 	router.HandleFunc("/login", AttemptToAuthenticate).Methods("POST")
-	router.HandleFunc("/logout", Logout).Methods("POST")
+	router.HandleFunc("/logout", Logout).Methods("GET")
 
-	_, err := database.NewConnection(env("DB_URL", DatabaseDsn), true)
+	_, err := database.NewConnection(env("DB_URL", ""), true)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Could not connect to database:", err)
 	}
 
-	fmt.Println("Database connection established")
+	log.Println("Database connection established")
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", env("APP_PORT", "5000")),
@@ -35,10 +40,10 @@ func main() {
 		Handler:      router,
 	}
 
-	fmt.Printf("Server started and running at %s\n", srv.Addr)
+	log.Printf("Server started and running at %s\n", srv.Addr)
 
 	if err := srv.ListenAndServe(); err != nil {
-		log.Fatal(err)
+		log.Fatal("Server failed to start:", err)
 	}
 }
 

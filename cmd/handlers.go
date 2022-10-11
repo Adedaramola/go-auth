@@ -1,9 +1,15 @@
 package main
 
 import (
-	"encoding/json"
 	"net/http"
+
+	"github.com/adedaramola/golang-auth/utils"
 )
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
 
 func RegisterUser(w http.ResponseWriter, r *http.Request) {
 
@@ -26,18 +32,5 @@ func Ping(w http.ResponseWriter, r *http.Request) {
 		"message": "Server is alive",
 	}
 
-	responseJson(w, data, http.StatusOK)
-}
-
-func responseJson(w http.ResponseWriter, data any, status int) error {
-	json, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	w.Write(json)
-
-	return nil
+	utils.ResponseJson(w, data, http.StatusOK)
 }
