@@ -23,6 +23,8 @@ func NewConnection(dbSource string, automigrate bool) (*DB, error) {
 		return nil, err
 	}
 
+	log.Println("Database connection established")
+
 	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
@@ -53,9 +55,9 @@ func runMigrations(migrationsPath, dbSource string) error {
 		break
 	case err != nil:
 		return err
+	case err == nil:
+		log.Println("Database migrated successfully")
 	}
-
-	log.Println("Database migrated successfully")
 
 	return nil
 }

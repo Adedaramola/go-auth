@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/adedaramola/golang-auth/internal/database"
@@ -31,8 +34,6 @@ func main() {
 		log.Fatal("Could not connect to database:", err)
 	}
 
-	log.Println("Database connection established")
-
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", env("APP_PORT", "5000")),
 		ReadTimeout:  time.Second * 30,
@@ -42,8 +43,25 @@ func main() {
 
 	log.Printf("Server started and running at %s\n", srv.Addr)
 
-	if err := srv.ListenAndServe(); err != nil {
-		log.Fatal("Server failed to start:", err)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+
+	<-exit
+
+	log.Println("Server closing")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	err = srv.Shutdown(ctx)
+	if err != nil {
+		log.Fatal("failed to exit:", err)
 	}
 }
 
