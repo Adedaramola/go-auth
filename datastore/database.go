@@ -1,4 +1,4 @@
-package database
+package datastore
 
 import (
 	"errors"
@@ -30,7 +30,7 @@ func NewConnection(dbSource string, automigrate bool) (*DB, error) {
 	db.SetMaxIdleConns(10)
 
 	if automigrate {
-		err := runMigrations("file://internal/database/migrations", dbSource)
+		err := runMigrations("file://datastore/migrations", dbSource)
 		if err != nil {
 			return nil, err
 		}
@@ -55,8 +55,6 @@ func runMigrations(migrationsPath, dbSource string) error {
 		break
 	case err != nil:
 		return err
-	case err == nil:
-		log.Println("Database migrated successfully")
 	}
 
 	return nil

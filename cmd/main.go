@@ -1,17 +1,14 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
-	"github.com/adedaramola/golang-auth/internal/database"
-	"github.com/gorilla/mux"
+	"github.com/adedaramola/golang-auth/datastore"
+	"github.com/adedaramola/golang-auth/internal/pkg/server"
+	"github.com/adedaramola/golang-auth/internal/transport"
+	"github.com/adedaramola/golang-auth/services"
 	"github.com/joho/godotenv"
 )
 
@@ -22,47 +19,24 @@ func init() {
 }
 
 func main() {
-	router := mux.NewRouter()
-
-	router.HandleFunc("/", Ping).Methods("GET")
-	router.HandleFunc("/register", RegisterUser).Methods("POST")
-	router.HandleFunc("/login", AttemptToAuthenticate).Methods("POST")
-	router.HandleFunc("/logout", Logout).Methods("GET")
-
-	_, err := database.NewConnection(env("DB_URL", ""), true)
+	db, err := datastore.NewConnection(env("DB_URL", ""), true)
 	if err != nil {
 		log.Fatal("Could not connect to database:", err)
 	}
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%s", env("APP_PORT", "5000")),
-		ReadTimeout:  time.Second * 30,
-		WriteTimeout: time.Second * 30,
-		Handler:      router,
-	}
+	// register application services
+	userService := services.NewUserService(db)
 
-	log.Printf("Server started and running at %s\n", srv.Addr)
+	// register route handlers
+	h := transport.NewHandler(userService)
 
-	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			log.Fatal(err)
-		}
-	}()
+	// start http server
+	server := server.NewServer(9000)
+	server.SetupRoutes(h.RegisterRoutes())
 
-	exit := make(chan os.Signal, 1)
-	signal.Notify(exit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	fmt.Println("Server started and running on http://localhost:9000")
 
-	<-exit
-
-	log.Println("Server closing")
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	err = srv.Shutdown(ctx)
-	if err != nil {
-		log.Fatal("failed to exit:", err)
-	}
+	server.Listen()
 }
 
 func env(key, defaultValue string) string {
