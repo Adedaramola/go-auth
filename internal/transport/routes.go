@@ -21,7 +21,11 @@ func (h *Handler) RegisterRoutes() http.Handler {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello world"))
+		_, err := w.Write([]byte("Hello world"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}).Methods("GET")
 
 	router.HandleFunc("/register", h.registerUser).Methods("POST")
